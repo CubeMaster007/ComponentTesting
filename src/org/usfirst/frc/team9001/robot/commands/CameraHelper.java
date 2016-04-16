@@ -1,54 +1,74 @@
 package org.usfirst.frc.team9001.robot.commands;
 
-import java.sql.Driver;
 import java.util.List;
+import java.util.TimerTask;
 
-import org.usfirst.frc.team9001.robot.Robot;
+import org.usfirst.frc.team9001.robot.RobotMap;
 import org.usfirst.frc.team9001.robot.util.PixyCmu5;
 import org.usfirst.frc.team9001.robot.util.PixyCmu5.PixyFrame;
 
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.command.Command;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class CameraHelper extends Command {
+public final class CameraHelper extends TimerTask {
 	
-	private PixyCmu5 cam;
+	private static CameraHelper instance;
+	
+	private final PixyCmu5 cam;
 	
 	private static final double TARGET_WIDTH = 0.508;//meters
 	
 	private List<PixyFrame> frames;
 	private PixyFrame activeFrame;
-	private boolean isReading;
+	public boolean isOnTarget;
+	private boolean doDebug;
 	private int numFrames;
-	private double dataAge;
-	private double camToTarget;
+	public double dataAge;
+	public double camToTarget;
+	public double timeSinceLastRun, lastTime;
 	
-	@Override
-	protected void initialize() {
-		cam = Robot.pixyCam;
-		
-		isReading = false;
+	private CameraHelper(PixyCmu5 cam, boolean doDebug) {
+		this.cam = cam;
+		this.doDebug = doDebug;
 		numFrames = 0;
-		dataAge = 0;
+		dataAge = timeSinceLastRun = lastTime = 0;
 	}
 	
-	@Override
-	protected void execute() {
-		calcData();
-		logData();
+	public static CameraHelper getInstance() {
+		if (instance == null) {
+			instance = new CameraHelper(RobotMap.pixyCam, true);
+		}
+		return instance;
+	}
+	
+	public void logData(boolean doLog) {
+		doDebug = doLog;
 	}
 	
 	private void calcData() {
 		frames = cam.getCurrentframes();
-		isReading = cam.getIsReading();
 		dataAge = cam.getDataAge();
 		numFrames = frames.size();
 		activeFrame = calcBiggestFrame(frames);
 		
 		try {
+			/* Derivation of logic:
+			 * 
+			 * tan(theta) = y/x
+			 * tan(angle of target in FOV) = (half of target width)/(distance to target)
+			 * tan((width of target px)/2 * (degs per px)) = (half of target width)/(distance to target)
+			 * (distance to target) * tan((width of target px)/2 * (degs per px)) = (half of target width)
+			 * (distance to target) = (half of target width) / tan((width of target px)/2 * (degs per px))
+			 * 
+			 * Notes:
+			 * 
+			 * only works at right angle to target
+			 */
 			camToTarget = (TARGET_WIDTH/2) / Math.tan(Math.toRadians(activeFrame.width/2 * PixyCmu5.PIXY_X_DEG_PER_PIXEL));
-			camToTarget *= 3.28084; //fine, in feet TODO: get rid of to change to meters for real use! #hardcore_metric_fan #imperial_sucks
+			
+			
+			
 		}catch(Exception e) {
 			DriverStation.reportError("Error calculating distance to target, frame cannot be null!", true);
 		}
@@ -79,23 +99,8 @@ public class CameraHelper extends Command {
 		}
 	}
 	
-	@Override
-	protected void interrupted() {
-		
-	}
-	
-	@Override
-	protected boolean isFinished() {
-		return false;
-	}
-	
-	@Override
-	protected void end() {
-		
-	}
-	
-	private void logData() {
-		SmartDashboard.putBoolean("IsReading", isReading);
+	public void logData() {
+		SmartDashboard.putNumber("TimeSinceLastRun", timeSinceLastRun);
 		SmartDashboard.putNumber("DataAge", dataAge);
 		SmartDashboard.putNumber("NumFrames", numFrames);
 		
@@ -123,6 +128,14 @@ public class CameraHelper extends Command {
 			SmartDashboard.putNumber("activeFrame_xDegOffset", cam.degreesXFromCenter(activeFrame));
 			SmartDashboard.putNumber("activeFrame_CamToTarget", camToTarget);
 		}
+	}
+
+	@Override
+	public void run() {
+		timeSinceLastRun = Timer.getFPGATimestamp()-lastTime;
+		calcData();
+		if (doDebug) logData();
+		lastTime = Timer.getFPGATimestamp();
 	}
 	
 }

@@ -1,13 +1,18 @@
 
 package org.usfirst.frc.team9001.robot;
 
+import java.util.Timer;
+
 import org.usfirst.frc.team9001.robot.commands.CameraHelper;
+import org.usfirst.frc.team9001.robot.commands.UltrasonicHelper;
+import org.usfirst.frc.team9001.robot.subsystems.Launcher;
 import org.usfirst.frc.team9001.robot.util.PixyCmu5;
 
-import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -19,9 +24,12 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 public class Robot extends IterativeRobot {
 	
 	public static OI oi;
-	public static PixyCmu5 pixyCam;
+	public static Launcher launcher;
+	
+	private final Timer timer = new Timer("Camera timer", true);
 	
 	private CameraHelper camHelper;
+	private UltrasonicHelper ultrasonicHelper;
 	
     /**
      * This function is run when the robot is first started up and should be
@@ -29,15 +37,12 @@ public class Robot extends IterativeRobot {
      */
     public void robotInit() {
 		oi = new OI();
+		RobotMap.init();
 		
-		try {
-			pixyCam = new PixyCmu5(0x8a, 0.2);
-		}catch(Exception e) {
-			DriverStation.reportError("Error instantiating PixyCam!", true);
-			pixyCam = null;
-		}
+		camHelper = CameraHelper.getInstance();
+		ultrasonicHelper = new UltrasonicHelper();
 		
-		camHelper = new CameraHelper();
+		timer.scheduleAtFixedRate(camHelper, 0, 200);
     }
 	
 	/**
@@ -79,7 +84,7 @@ public class Robot extends IterativeRobot {
         // continue until interrupted by another command, remove
         // this line or comment it out.
     	
-    	camHelper.start();
+    	ultrasonicHelper.start();
     }
     
     /**

@@ -2,17 +2,16 @@
 package org.usfirst.frc.team9001.robot;
 
 import java.util.Timer;
+import java.util.TimerTask;
 
 import org.usfirst.frc.team9001.robot.commands.CameraHelper;
 import org.usfirst.frc.team9001.robot.commands.UltrasonicHelper;
-import org.usfirst.frc.team9001.robot.subsystems.Launcher;
-import org.usfirst.frc.team9001.robot.util.PixyCmu5;
 
-import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.IterativeRobot;
+import edu.wpi.first.wpilibj.Relay;
+import edu.wpi.first.wpilibj.Relay.Value;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -24,12 +23,13 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Robot extends IterativeRobot {
 	
 	public static OI oi;
-	public static Launcher launcher;
 	
 	private final Timer timer = new Timer("Camera timer", true);
 	
 	private CameraHelper camHelper;
 	private UltrasonicHelper ultrasonicHelper;
+	
+	private TimerTask flashLights;
 	
     /**
      * This function is run when the robot is first started up and should be
@@ -42,7 +42,18 @@ public class Robot extends IterativeRobot {
 		camHelper = CameraHelper.getInstance();
 		ultrasonicHelper = new UltrasonicHelper();
 		
+		flashLights = new TimerTask() {
+			Relay spike = RobotMap.spike;
+			boolean isOn = false;
+			@Override
+			public void run() {
+				spike.set(isOn ? Value.kOn:Value.kOff);
+				isOn = !isOn;
+			}
+		};
+		
 		timer.scheduleAtFixedRate(camHelper, 0, 200);
+		timer.scheduleAtFixedRate(flashLights, 0, 200);
     }
 	
 	/**
@@ -85,7 +96,7 @@ public class Robot extends IterativeRobot {
         // this line or comment it out.
     	
     	ultrasonicHelper.start();
-    }
+	    }
     
     /**
      * This function is called periodically during operator control

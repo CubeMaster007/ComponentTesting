@@ -1,9 +1,12 @@
 package org.usfirst.frc.team9001.robot.commands;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.TimerTask;
 
 import org.usfirst.frc.team9001.robot.RobotMap;
+import org.usfirst.frc.team9001.robot.util.FixedSizeLinkedList;
 import org.usfirst.frc.team9001.robot.util.PixyCmu5;
 import org.usfirst.frc.team9001.robot.util.PixyCmu5.PixyFrame;
 
@@ -18,12 +21,16 @@ public final class CameraHelper extends TimerTask {
 	private final PixyCmu5 cam;
 	
 	private static final double TARGET_WIDTH = 0.508;//meters
+	private static final int STASH_SIZE = 20;
 	
 	private List<PixyFrame> frames;
+	private FixedSizeLinkedList<PixyFrame> stashedFrames;
+	private ArrayList<PixyFrame> validFrames;
 	private PixyFrame activeFrame;
-	public boolean isOnTarget;
 	private boolean doDebug;
 	private int numFrames;
+	
+	public boolean isOnTarget;
 	public double dataAge;
 	public double camToTarget;
 	public double timeSinceLastRun, lastTime;
@@ -33,6 +40,8 @@ public final class CameraHelper extends TimerTask {
 		this.doDebug = doDebug;
 		numFrames = 0;
 		dataAge = timeSinceLastRun = lastTime = 0;
+		stashedFrames = new FixedSizeLinkedList<PixyFrame>(STASH_SIZE);
+		validFrames = new ArrayList<PixyFrame>();
 	}
 	
 	public static CameraHelper getInstance() {
@@ -66,11 +75,41 @@ public final class CameraHelper extends TimerTask {
 			 * only works at right angle to target
 			 */
 			camToTarget = (TARGET_WIDTH/2) / Math.tan(Math.toRadians(activeFrame.width/2 * PixyCmu5.PIXY_X_DEG_PER_PIXEL));
-			
-			
-			
 		}catch(Exception e) {
 			DriverStation.reportError("Error calculating distance to target, frame cannot be null!", true);
+		}
+		
+		stashedFrames.addFirst(activeFrame);
+		
+		int numStashedFrames = stashedFrames.size();
+		int sumWidth = 0, sumHeight = 0, sumCenterX = 0, sumCenterY = 0;
+		int sumSqrWidth = 0, sumSqrHeight = 0, sumSqrCenterX = 0, sumSqrCenterY = 0;
+		double avgWidth, avgHeight, avgCenterX, avgCenterY;
+		double stdDevWidth, stdDevHeight, stdDevCenterX, stdDevCenterY;
+		for (PixyFrame pf: stashedFrames) {
+			sumWidth += pf.width;
+			sumHeight += pf.height;
+			sumCenterX += pf.xCenter;
+			sumCenterY += pf.yCenter;
+			
+			sumSqrWidth += pf.width*pf.width;
+			sumSqrHeight += pf.height*pf.height;
+			sumSqrCenterX += pf.xCenter*pf.xCenter;
+			sumSqrCenterY += pf.yCenter*pf.yCenter;
+		}
+		
+		avgWidth = ((double)sumWidth)/numStashedFrames;
+		avgHeight = ((double)sumHeight)/numStashedFrames;
+		avgCenterX = ((double)sumCenterX)/numStashedFrames;
+		avgCenterY = ((double)sumCenterY)/numStashedFrames;
+		
+		stdDevWidth = Math.sqrt(((double)sumWidth)/numStashedFrames);
+		stdDevHeight = Math.sqrt(((double)sumHeight)/numStashedFrames);
+		stdDevCenterX = Math.sqrt(((double)sumCenterX)/numStashedFrames);
+		stdDevCenterY = Math.sqrt(((double)sumCenterY)/numStashedFrames);
+		
+		for (PixyFrame pf: stashedFrames) {
+			
 		}
 	}
 

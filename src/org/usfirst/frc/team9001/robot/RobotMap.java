@@ -4,6 +4,7 @@ import org.usfirst.frc.team9001.robot.util.PixyCmu5;
 
 import edu.wpi.first.wpilibj.AnalogInput;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Relay;
 
 /**
  * The RobotMap is a mapping from the ports sensors and actuators are wired into
@@ -24,7 +25,7 @@ public class RobotMap {
 	
 	public static AnalogInput ultrasonic;
 	public static PixyCmu5 pixyCam;
-	
+	public static Relay spike;
 	
 	
 	
@@ -37,5 +38,7 @@ public class RobotMap {
 		}
 		
 		ultrasonic = new AnalogInput(3);
+		
+		spike = new Relay(0);
 	}
 }
